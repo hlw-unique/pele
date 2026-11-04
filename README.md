@@ -21,11 +21,11 @@
 
 ## 在线使用
 
-部署完成后访问：
-
 ```text
-https://<你的用户名>.github.io/pele/
+https://hlw-unique.github.io/pele/
 ```
+
+站点由 GitHub Actions 从 `main` 分支自动发布；Fork 或改名后换成自己的地址即可，构建配置不需要改。
 
 ## 本地开发
 
