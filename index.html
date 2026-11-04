@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="纯前端的 Mermaid 图表工作台，基于 pele 渲染，支持主题定制、SVG/PNG 导出与复制图片。">
+  <title>Pele 图表工作台</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">🌋</span>
+      <div class="brand-text">
+        <h1>Pele 图表工作台</h1>
+        <p>Mermaid → SVG / PNG</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span id="status" class="status" role="status" aria-live="polite"></span>
+      <button id="copy-png" class="button secondary" type="button" title="把当前图表按 PNG 设置复制为图片">复制图片</button>
+      <button id="export-svg" class="button secondary" type="button">导出 SVG</button>
+      <button id="export-png" class="button primary" type="button">导出 PNG</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="panel editor-panel" aria-label="Mermaid 代码">
+      <div class="panel-head">
+        <label class="select-wrap">
+          <span>示例</span>
+          <select id="example-select"></select>
+        </label>
+        <button id="restore-code" class="ghost small" type="button" title="恢复当前示例的代码">恢复</button>
+      </div>
+      <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Mermaid 源码"></textarea>
+      <div class="editor-foot">
+        <span class="hint">Ctrl / ⌘ + Enter 立即渲染</span>
+        <span id="code-count" class="hint"></span>
+      </div>
+      <div id="error-box" class="error-box" hidden>
+        <div id="error-title" class="error-title"></div>
+        <pre id="error-detail" class="error-detail"></pre>
+      </div>
+    </section>
+
+    <section class="panel preview-panel" aria-label="预览">
+      <div class="panel-head preview-head">
+        <div id="preview-meta" class="preview-meta">正在加载…</div>
+        <div class="preview-note">预览与 PNG 使用同一套渲染</div>
+      </div>
+      <div class="preview-scroll">
+        <div class="preview-stage">
+          <div id="preview" class="preview-canvas">
+            <div class="preview-empty">正在加载图表…</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel style-panel" aria-label="样式与导出">
+      <div class="panel-head style-head">
+        <div class="tabs" role="tablist" aria-label="设置">
+          <button id="tab-style" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="style-pane">样式</button>
+          <button id="tab-export" class="tab" type="button" role="tab" aria-selected="false" aria-controls="export-pane">导出</button>
+        </div>
+        <button id="reset-all" class="ghost small" type="button" title="恢复默认样式和导出设置">重置</button>
+      </div>
+
+      <div id="style-pane" class="pane" role="tabpanel" aria-labelledby="tab-style">
+        <div class="section preset-block">
+          <div class="section-title">主题预设</div>
+          <div id="presets" class="presets"></div>
+        </div>
+        <div id="theme-controls"></div>
+
+        <div class="section">
+          <div class="section-title">线条</div>
+          <div class="field">
+            <label class="field-label" for="edge-width">粗细</label>
+            <select id="edge-width" class="select">
+              <option value="auto">保持原样</option>
+              <option value="0.5">0.5</option>
+              <option value="1">1</option>
+              <option value="1.5">1.5</option>
+              <option value="2">2</option>
+              <option value="2.5">2.5</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+          <label class="check">
+            <input id="edge-dash" type="checkbox">
+            <span>虚线</span>
+          </label>
+          <p class="hint">线条颜色同时控制箭头；更多箭头样式可用自定义 CSS。</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">字号</div>
+          <div class="field">
+            <label class="field-label" for="font-size">正文</label>
+            <div class="range-row">
+              <input id="font-size" type="range" min="12" max="24" step="1" value="16">
+              <output id="font-size-value" class="range-value">16px</output>
+            </div>
+          </div>
+        </div>
+
+        <details class="section details">
+          <summary>自定义 CSS</summary>
+          <textarea id="custom-css" class="css-input" spellcheck="false" placeholder="/* 例如：节点边框加粗 */
+.pele-node > rect,
+.pele-node > path {
+  stroke-width: 2;
+}
+
+/* 单独调整箭头颜色 */
+.pele-marker {
+  fill: var(--pele-accent);
+}"></textarea>
+          <p class="hint">CSS 在 SVG 内生效。可用 .pele-node、.pele-edge、.pele-marker、.pele-label 等类名。</p>
+        </details>
+      </div>
+
+      <div id="export-pane" class="pane" role="tabpanel" aria-labelledby="tab-export" hidden>
+        <div class="section">
+          <div class="section-title">PNG 设置</div>
+          <div class="field">
+            <label class="field-label" for="png-scale">倍率</label>
+            <select id="png-scale" class="select">
+              <option value="1">1x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+              <option value="3">3x</option>
+              <option value="4">4x</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="png-background">背景</label>
+            <select id="png-background" class="select">
+              <option value="auto">跟随主题</option>
+              <option value="transparent">透明</option>
+              <option value="custom">自定义</option>
+            </select>
+          </div>
+          <div id="png-color-field" class="field" hidden>
+            <label class="field-label" for="png-color">背景色</label>
+            <div class="color-box">
+              <input id="png-color" type="color" value="#ffffff" aria-label="PNG 背景色">
+              <input id="png-color-text" type="text" class="color-text" value="#ffffff" spellcheck="false" aria-label="PNG 背景色十六进制值">
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="png-padding">留白</label>
+            <div class="range-row">
+              <input id="png-padding" type="range" min="0" max="96" step="4" value="24">
+              <output id="png-padding-value" class="range-value">24px</output>
+            </div>
+          </div>
+          <div class="estimate">
+            <span>预计输出</span>
+            <strong id="png-estimate">—</strong>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">下载</div>
+          <div class="export-buttons">
+            <button id="copy-png-pane" class="button secondary block" type="button">复制图片到剪贴板</button>
+            <button id="export-png-pane" class="button primary block" type="button">下载 PNG</button>
+            <button id="export-svg-pane" class="button secondary block" type="button">下载 SVG</button>
+          </div>
+          <p class="hint">SVG 会内联主题变量，下载后可独立打开。复制和 PNG 使用上面的倍率、背景与留白设置，可以直接粘贴到文档、聊天窗口或设计工具里。</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">导出说明</div>
+          <p class="hint">PNG 由浏览器直接栅格化：预览和导出使用同一个渲染引擎，所见即所得；字体取自访客的系统，中文标签无需额外配置。单边最大 8192 px、总计 3200 万像素。</p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <datalist id="font-list"></datalist>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <noscript>需要启用 JavaScript 才能使用这个工作台。</noscript>
+  <script type="module" src="./src/web/main.js"></script>
+</body>
+</html>
